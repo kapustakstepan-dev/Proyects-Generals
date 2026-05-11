@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Users - Admin Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="admin-body">
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="{{ url_for('home') }}" class="logo">RetroBite Admin</a>
+            {% if current_user.is_authenticated %}
+            <span class="user-info">{{ current_user.nickname }}</span>
+            {% endif %}
+        </div>
+
+        <ul class="nav-links">
+            <li><a href="{{ url_for('menu_check') }}">Menu Check</a></li>
+            <li><a href="{{ url_for('all_users') }}" class="active-link">All Users</a></li>
+            <li><a href="{{ url_for('home') }}">Back to Site</a></li>
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        <h1 class="page-title">Registered Users</h1>
+
+        <div class="admin-table-container animate-reveal">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th data-i18n="admin_ref">ID</th>
+                        <th data-i18n="admin_nickname">Nickname</th>
+                        <th data-i18n="email_label">Email</th>
+                        <th data-i18n="admin_role">Role</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.nickname }}</td>
+                        <td>{{ user.email }}</td>
+                        <td class="role-badge">{{ user.role }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/translate.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>

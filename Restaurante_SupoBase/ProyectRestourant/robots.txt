@@ -1,0 +1,15 @@
+# https://github.com/kapustakstepan-dev/Project-Restaurant
+User-agent: *
+Allow: /
+Allow: /static/
+
+# No indexar rutas privadas o de gestión
+Disallow: /admin/
+Disallow: /logout/
+Disallow: /my_orders/
+Disallow: /my_reservations/
+Disallow: /login/
+Disallow: /register/
+
+# Enlace al Sitemap (Cámbialo por tu dominio real cuando lo despliegues)
+Sitemap: https://tu-dominio-real.com/sitemap.xml

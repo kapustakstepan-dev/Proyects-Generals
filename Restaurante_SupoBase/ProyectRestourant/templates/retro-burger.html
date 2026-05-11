@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Burger</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .position-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3rem;
+            margin-top: 4rem;
+            align-items: center;
+        }
+
+        .position-image {
+            flex: 1;
+            min-width: 300px;
+            height: 400px;
+            background-color: var(--secondary-color);
+            border: 4px solid var(--text-color);
+            border-radius: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 10px 10px 0px var(--text-color);
+        }
+
+        .position-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+
+        .position-details {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .position-title {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+            text-shadow: 3px 3px 0px var(--accent-color);
+        }
+
+        .position-meta {
+            font-size: 1.2rem;
+            color: var(--text-color);
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .position-desc {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .position-price {
+            font-size: 2.5rem;
+            font-family: var(--font-heading);
+            color: var(--secondary-color);
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <a href="{{ url_for('home') }}" class="logo">RetroBite</a>
+        <ul class="nav-links">
+            <li><a href="{{ url_for('menu') }}" data-i18n="nav_menu" style="color: var(--secondary-color);">Menu</a>
+            </li>
+            <li><a href="{{ url_for('login') }}" data-i18n="nav_login">Login</a></li>
+            <li><a href="{{ url_for('register') }}" data-i18n="nav_register">Register</a></li>
+            <li><a href="{{ url_for('my_orders') }}" data-i18n="nav_orders">My Orders</a></li>
+            <li><a href="{{ url_for('my_reservations') }}" data-i18n="nav_reserved">Reservation</a></li>
+        </ul>
+        <div class="lang-switcher">
+            <button class="lang-btn" data-lang="en">EN</button>
+            <button class="lang-btn" data-lang="es">ES</button>
+            <button class="lang-btn" data-lang="ua">UA</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <a href="{{ url_for('menu') }}" class="retro-btn" style="margin-top: 2rem;">&larr; Back to Menu</a>
+
+        <div class="position-container animate-reveal">
+            <div class="position-image">
+                <img src="/ProyectRestourant/image/burger.jpg"
+                    alt="Retro Burger">
+            </div>
+            <div class="position-details">
+                <h1 class="position-title" data-i18n="item_burger">Retro Burger</h1>
+                <div class="position-meta"><span data-i18n="weight_label">Weight</span>: 450g</div>
+                <p class="position-desc" data-i18n="desc_burger">Classic double patty with melted cheese, lettuce, and
+                    secret diner sauce.</p>
+
+                <h3 style="margin-bottom: 0.5rem;" data-i18n="ingredients_label">Ingredients:</h3>
+                <ul style="margin-left: 1.5rem; margin-bottom: 2rem; line-height: 1.5;">
+                    <li>Beef Patty (x2)</li>
+                    <li>Cheddar Cheese</li>
+                    <li>Lettuce & Tomato</li>
+                    <li>Secret Sauce</li>
+                    <li>Brioche Bun</li>
+                </ul>
+
+                <div class="position-price">$12.99</div>
+                <button class="retro-btn trigger-order" data-item="Retro Burger" data-price="12.99"
+                    data-i18n="order_now" style="font-size: 1.5rem; padding: 1rem 3rem;">Order Now</button>
+            </div>
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='libs/anime.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/translate.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/invoice.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+</body>
+
+</html>

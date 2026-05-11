@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Página no Encontrada | RetroBite</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Specific Glitch Effect for 404 */
+        .glitch-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+            padding: 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .glitch {
+            font-family: var(--font-heading);
+            font-size: clamp(6rem, 20vw, 12rem);
+            color: var(--primary-color);
+            position: relative;
+            text-shadow: 4px 4px 0px var(--accent-color);
+            line-height: 1;
+            margin: 0;
+            cursor: default;
+        }
+
+        .glitch::before,
+        .glitch::after {
+            content: "404";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.8;
+        }
+
+        .glitch::before {
+            color: var(--secondary-color);
+            z-index: -1;
+            animation: glitch-anim 2s infinite linear alternate-reverse;
+        }
+
+        .glitch::after {
+            color: var(--accent-color);
+            z-index: -2;
+            animation: glitch-anim 3s infinite linear alternate;
+        }
+
+        @keyframes glitch-anim {
+            0% { clip-path: inset(10% 0 30% 0); transform: translate(-2px, 2px); }
+            20% { clip-path: inset(40% 0 10% 0); transform: translate(2px, -2px); }
+            40% { clip-path: inset(70% 0 5% 0); transform: translate(-1px, 1px); }
+            60% { clip-path: inset(20% 0 60% 0); transform: translate(1px, -1px); }
+            80% { clip-path: inset(50% 0 20% 0); transform: translate(-2px, 0); }
+            100% { clip-path: inset(10% 0 40% 0); transform: translate(2px, 2px); }
+        }
+
+        .subtitle-404 {
+            font-family: var(--font-heading);
+            font-size: 2.5rem;
+            margin: 1rem 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-color);
+        }
+
+        .description-404 {
+            font-size: 1.2rem;
+            max-width: 500px;
+            margin-bottom: 3rem;
+            line-height: 1.6;
+        }
+
+        /* Particle System */
+        .particles-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            background-color: var(--secondary-color);
+            border-radius: 50%;
+            opacity: 0.4;
+            animation: float-up 15s infinite linear;
+        }
+
+        @keyframes float-up {
+            from { transform: translateY(110vh) rotate(0deg); }
+            to { transform: translateY(-10vh) rotate(360deg); }
+        }
+    </style>
+</head>
+
+<body style="overflow: hidden;">
+    <!-- Background Particles -->
+    <div class="particles-bg" id="particle-container"></div>
+
+    <main class="glitch-container animate-reveal">
+        <h1 class="glitch" data-content="404">404</h1>
+        <h2 class="subtitle-404" data-i18n="error_404_subtitle">Página no encontrada</h2>
+        
+        <div class="description-404">
+            <p data-i18n="error_404_description1">Parece que te has perdido en el tiempo.</p>
+            <p data-i18n="error_404_description2">¡Vuelve al presente para disfrutar del mejor sabor retro!</p>
+        </div>
+
+        <a href="{{ url_for('home') }}" class="retro-btn cta-large" data-i18n="error_404_btn">
+            VOLVER AL INICIO
+        </a>
+    </main>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/translate.js') }}"></script>
+    <script>
+        // Particle Generator
+        const container = document.getElementById('particle-container');
+        const colors = ['#ff6b6b', '#4ecdc4', '#ffd166'];
+
+        for (let i = 0; i < 25; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+
+            const size = Math.random() * 25 + 10;
+            const left = Math.random() * 100;
+            const delay = Math.random() * 10;
+            const duration = Math.random() * 10 + 10;
+            const color = colors[Math.floor(Math.random() * colors.length)];
+
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            particle.style.left = `${left}%`;
+            particle.style.backgroundColor = color;
+            particle.style.animationDelay = `${delay}s`;
+            particle.style.animationDuration = `${duration}s`;
+
+            if (Math.random() > 0.5) particle.style.borderRadius = '4px';
+            container.appendChild(particle);
+        }
+
+        // Parallax Effect
+        document.addEventListener('mousemove', (e) => {
+            const x = (window.innerWidth / 2 - e.pageX) / 40;
+            const y = (window.innerHeight / 2 - e.pageY) / 40;
+            document.querySelector('.glitch-container').style.transform = `translate(${x}px, ${y}px)`;
+        });
+    </script>
+</body>
+
+</html>

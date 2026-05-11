@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ position.name }} - RetroBite</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="{{ url_for('home') }}" class="logo">RetroBite</a>
+            {% if current_user.is_authenticated %}
+            <span class="user-info">{{ current_user.nickname }}</span>
+            {% endif %}
+        </div>
+
+        <ul class="nav-links">
+            <li><a href="{{ url_for('menu') }}" data-i18n="nav_menu" class="active-link">Menu</a></li>
+            <li><a href="{{ url_for('my_orders') }}" data-i18n="nav_orders">My Orders</a></li>
+            <li><a href="{{ url_for('my_reservations') }}" data-i18n="nav_reserved">Reservation</a></li>
+            {% if current_user.is_authenticated %}
+            <li><a href="{{ url_for('logout') }}" data-i18n="nav_logout">Logout</a></li>
+            {% else %}
+            <li><a href="{{ url_for('login') }}" data-i18n="nav_login">Login</a></li>
+            {% endif %}
+        </ul>
+
+        <div class="lang-switcher">
+            <button class="lang-btn" data-lang="en">EN</button>
+            <button class="lang-btn" data-lang="es">ES</button>
+            <button class="lang-btn" data-lang="ua">UA</button>
+        </div>
+
+        <button id="theme-toggle" class="retro-btn" onclick="toggleTheme()" style="margin-left: 1rem; padding: 0.3rem 0.8rem;">
+            <span id="theme-icon">🌙</span> <span data-i18n="nav_theme">Change Theme</span>
+        </button>
+    </nav>
+
+    <main class="container">
+        <a href="{{ url_for('menu') }}" class="retro-btn back-btn" data-i18n="back_to_menu" style="margin-bottom: 2rem;">
+            &larr; Back to Menu
+        </a>
+
+        <div class="position-container animate-reveal">
+            <div class="position-image">
+                {% if position and position.file_name %}
+                <img src="{{ url_for('static', filename='image/' + position.file_name) }}" alt="{{ position.name }}">
+                {% else %}
+                <p class="placeholder-text">No image available</p>
+                {% endif %}
+            </div>
+
+            <div class="position-details">
+                <h1 class="position-title" data-i18n="item_{{ position.name | lower | replace(' ', '_') }}">{{ position.name }}</h1>
+
+                <div class="position-info-block">
+                    <p class="position-meta">
+                        <!-- Weight is optional, but let's keep it for compatibility if needed -->
+                    </p>
+                    <p class="position-price">${{ "%.2f"|format(position.price) }}</p>
+                </div>
+
+                <div class="position-description">
+                    <h3 data-i18n="description_label">Description:</h3>
+                    <p data-i18n="desc_{{ position.name | lower | replace(' ', '_') }}">{{ position.description }}</p>
+                </div>
+
+                <form action="{{ url_for('position', position_id=position.id) }}" method="POST" class="add-to-cart-standalone" style="margin-top: 2rem;">
+                    <div class="form-group inline-group">
+                        <label for="quantity" data-i18n="label_quantity">Quantity:</label>
+                        <input type="number" name="quantity" id="quantity" value="1" min="1" max="10" class="retro-input quantity-input">
+                    </div>
+                    
+                    <button type="submit" class="retro-btn cta-large" data-i18n="add_to_cart" style="width: 100%; margin-top: 1rem;">
+                        Add to Cart
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='libs/anime.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/translate.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>

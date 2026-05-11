@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - RetroBite</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .admin-layout {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            min-height: 100vh;
+        }
+
+        .admin-sidebar {
+            background: #1a1a1a;
+            color: white;
+            padding: 2rem 1.5rem;
+            border-right: 4px solid var(--primary-color);
+        }
+
+        .sidebar-logo {
+            font-family: var(--font-heading);
+            font-size: 1.8rem;
+            margin-bottom: 3rem;
+            color: var(--primary-color);
+            display: block;
+            text-decoration: none;
+        }
+
+        .sidebar-nav {
+            list-style: none;
+        }
+
+        .sidebar-nav li {
+            margin-bottom: 1rem;
+        }
+
+        .sidebar-nav a {
+            color: #ccc;
+            text-decoration: none;
+            display: block;
+            padding: 0.8rem 1rem;
+            border-radius: 4px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .sidebar-nav a:hover, .sidebar-nav a.active {
+            background: var(--primary-color);
+            color: var(--bg-color);
+            box-shadow: 4px 4px 0px var(--accent-color);
+        }
+
+        .admin-main {
+            padding: 2rem 3rem;
+            background: #fdfdfd;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-bottom: 3px solid #eee;
+            padding-bottom: 1rem;
+        }
+
+        .status-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-preparing { background: #ffeaa7; color: #d35400; }
+        .status-confirmed { background: #55efc4; color: #00b894; }
+        .status-delivered { background: #81ecec; color: #0984e3; }
+        .status-pending { background: #dfe6e9; color: #636e72; }
+        .status-cancelled { background: #ff7675; color: #d63031; }
+
+        .role-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .role-admin { background: #a29bfe; color: #6c5ce7; }
+        .role-user { background: #dbd9db; color: #2d3436; }
+
+        .menu-thumb {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        /* CRUD Modal Styles */
+        .modal-trigger { display: none; }
+        .modal-trigger:checked + .modal-overlay { display: flex; }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 3000;
+            justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            border: 4px solid var(--primary-color);
+            box-shadow: 10px 10px 0 var(--accent-color);
+        }
+    </style>
+</head>
+
+<body class="admin-body">
+    <div class="admin-layout">
+        <aside class="admin-sidebar">
+            <a href="{{ url_for('home') }}" class="sidebar-logo">RETROBITE</a>
+            <ul class="sidebar-nav">
+                <li><a href="?tab=menu" class="{{ 'active' if active_tab == 'menu' else '' }}" data-i18n="admin_menu_crud">Menu CRUD</a></li>
+                <li><a href="?tab=orders" class="{{ 'active' if active_tab == 'orders' else '' }}" data-i18n="admin_global_orders">Global Orders</a></li>
+                <li><a href="?tab=reservations" class="{{ 'active' if active_tab == 'reservations' else '' }}" data-i18n="admin_reservations">Reservations</a></li>
+                <li><a href="?tab=users" class="{{ 'active' if active_tab == 'users' else '' }}" data-i18n="admin_users">Users</a></li>
+                <li style="margin-top: 4rem;"><a href="{{ url_for('home') }}" style="border: 2px solid #444;" data-i18n="admin_exit">&larr; Exit Admin</a></li>
+            </ul>
+        </aside>
+
+        <main class="admin-main">
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div class="flash-messages">
+                {% for message in messages %}
+                <div class="flash-item">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <!-- SECTION: MENU -->
+            {% if active_tab == 'menu' %}
+            <div class="section-container">
+                <div class="section-header">
+                    <h2 data-i18n="admin_gest_menu">Gestión del Menú</h2>
+                    <label for="add-modal" class="retro-btn" style="padding: 0.5rem 1rem; cursor: pointer;" data-i18n="admin_add_plate">+ Añadir Plato</label>
+                </div>
+                <div class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="admin_img">IMG</th>
+                                <th data-i18n="admin_name">Nombre</th>
+                                <th data-i18n="admin_price">Precio</th>
+                                <th data-i18n="admin_status">Estado</th>
+                                <th data-i18n="admin_actions">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td><img src="{{ url_for('static', filename='image/' + (item.file_name or 'burger.jpg')) }}" class="menu-thumb"></td>
+                                <td><strong>{{ item.name }}</strong></td>
+                                <td>${{ "%.2f"|format(item.price) }}</td>
+                                <td>
+                                    <span class="status-badge {{ 'status-confirmed' if item.active else 'status-pending' }}">
+                                        {{ 'Activo' if item.active else 'Inactivo' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <label for="edit-modal-{{ item.id }}" class="retro-btn small-btn" style="cursor: pointer;" data-i18n="admin_edit">Edit</label>
+                                        <form action="{{ url_for('admin_menu_delete', id=item.id) }}" method="POST" onsubmit="return confirm(window.translator.get('admin_delete') + '?')">
+                                            <button type="submit" class="retro-btn small-btn" style="--primary-color: #ff7675; border-color: #d63031;" data-i18n="admin_delete">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Add Modal -->
+            <input type="checkbox" id="add-modal" class="modal-trigger">
+            <div class="modal-overlay">
+                <div class="modal-content">
+                    <h3>Nuevo Plato</h3>
+                    <form action="{{ url_for('admin_menu_add') }}" method="POST" class="retro-form">
+                        <div class="form-group">
+                            <label>Nombre</label>
+                            <input type="text" name="name" required class="retro-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Precio</label>
+                            <input type="number" step="0.01" name="price" required class="retro-input">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="weight_label">Peso (Weight)</label>
+                            <input type="text" name="weight" placeholder="e.g. 300g" class="retro-input">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="ingredients_label">Ingredientes</label>
+                            <textarea name="ingredients" class="retro-input" placeholder="Lista de ingredientes..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="admin_desc">Descripción</label>
+                            <textarea name="description" class="retro-input"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="admin_img_file">Imagen (filename)</label>
+                            <input type="text" name="file_name" value="burger.jpg" class="retro-input">
+                        </div>
+                        <div class="modal-footer" style="display: flex; gap: 1rem; margin-top: 2rem;">
+                            <button type="submit" class="retro-btn full-width">Añadir</button>
+                            <label for="add-modal" class="retro-btn full-width" style="background:#eee; color:#333; text-align:center;">Cerrar</label>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- SECTION: ORDERS -->
+            {% if active_tab == 'orders' %}
+            <div class="section-container">
+                <div class="section-header">
+                    <h2>Pedidos Globales</h2>
+                </div>
+                <div class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="admin_ref">Ref</th>
+                                <th data-i18n="admin_client">Cliente</th>
+                                <th data-i18n="admin_total">Total</th>
+                                <th data-i18n="admin_status">Estado</th>
+                                <th data-i18n="admin_date">Fecha</th>
+                                <th data-i18n="admin_action">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders %}
+                            <tr>
+                                <td>#{{ order.id }}</td>
+                                <td>UserID: {{ order.user_id }}</td>
+                                <td>${{ "%.2f"|format(order.total_price or 0) }}</td>
+                                <td><span class="status-badge status-{{ order.state }}">{{ order.state }}</span></td>
+                                <td>{{ order.order_time.strftime("%d/%m %H:%M") if order.order_time else 'N/A' }}</td>
+                                <td>
+                                    <form action="{{ url_for('admin_order_status', id=order.id) }}" method="POST">
+                                        <select name="status" onchange="this.form.submit()" class="retro-input" style="padding: 2px; font-size: 0.8rem;">
+                                            <option value="pending" {{ 'selected' if order.state == 'pending' }}>Pending</option>
+                                            <option value="preparing" {{ 'selected' if order.state == 'preparing' }}>Preparing</option>
+                                            <option value="confirmed" {{ 'selected' if order.state == 'confirmed' }}>Confirmed</option>
+                                            <option value="delivered" {{ 'selected' if order.state == 'delivered' }}>Delivered</option>
+                                        </select>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- SECTION: RESERVATIONS -->
+            {% if active_tab == 'reservations' %}
+            <div class="section-container">
+                <div class="section-header">
+                    <h2>Reservas Globales</h2>
+                </div>
+                <div class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="admin_ref">Ref</th>
+                                <th data-i18n="admin_user">Usuario</th>
+                                <th data-i18n="admin_date">Fecha/Hora</th>
+                                <th data-i18n="admin_table_type">Mesa</th>
+                                <th data-i18n="admin_status">Status</th>
+                                <th data-i18n="admin_action">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for res in reservations %}
+                            <tr>
+                                <td>#{{ res.id }}</td>
+                                <td>ID: {{ res.user_id }}</td>
+                                <td>{{ res.time_start.strftime("%Y-%m-%d %H:%M") if res.time_start else 'N/A' }}</td>
+                                <td>{{ res.type_table | capitalize }}</td>
+                                <td><span class="status-badge status-{{ res.status }}">{{ res.status }}</span></td>
+                                <td>
+                                    <form action="{{ url_for('admin_res_status', id=res.id) }}" method="POST">
+                                        <select name="status" onchange="this.form.submit()" class="retro-input" style="padding: 2px; font-size: 0.8rem;">
+                                            <option value="pending" {{ 'selected' if res.status == 'pending' }}>Pending</option>
+                                            <option value="confirmed" {{ 'selected' if res.status == 'confirmed' }}>Confirmed</option>
+                                            <option value="cancelled" {{ 'selected' if res.status == 'cancelled' }}>Cancelled</option>
+                                        </select>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- SECTION: USERS -->
+            {% if active_tab == 'users' %}
+            <div class="section-container">
+                <div class="section-header">
+                    <h2>Lista de Usuarios</h2>
+                </div>
+                <div class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="admin_ref">ID</th>
+                                <th data-i18n="admin_nickname">Nickname</th>
+                                <th data-i18n="email_label">Email</th>
+                                <th data-i18n="admin_role">Rol</th>
+                                <th data-i18n="admin_action">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.id }}</td>
+                                <td><strong>{{ user.nickname }}</strong></td>
+                                <td>{{ user.email }}</td>
+                                <td><span class="role-badge role-{{ user.role }}">{{ user.role }}</span></td>
+                                <td>
+                                    <form action="{{ url_for('admin_user_role', id=user.id) }}" method="POST">
+                                        <select name="role" onchange="this.form.submit()" class="retro-input" style="padding: 2px; font-size: 0.8rem;">
+                                            <option value="user" {{ 'selected' if user.role == 'user' }}>User</option>
+                                            <option value="admin" {{ 'selected' if user.role == 'admin' }}>Admin</option>
+                                        </select>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+
+    <!-- Edit Modals for Menu (Generated in loop) -->
+    {% if active_tab == 'menu' %}
+    {% for item in items %}
+    <input type="checkbox" id="edit-modal-{{ item.id }}" class="modal-trigger">
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <h3>Editar: {{ item.name }}</h3>
+            <form action="{{ url_for('admin_menu_edit', id=item.id) }}" method="POST" class="retro-form">
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" name="name" value="{{ item.name }}" required class="retro-input">
+                </div>
+                <div class="form-group">
+                    <label>Precio</label>
+                    <input type="number" step="0.01" name="price" value="{{ item.price }}" required class="retro-input">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="weight_label">Peso (Weight)</label>
+                    <input type="text" name="weight" value="{{ item.weight or '' }}" class="retro-input">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="ingredients_label">Ingredientes</label>
+                    <textarea name="ingredients" class="retro-input">{{ item.ingredients or '' }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="admin_desc">Descripción</label>
+                    <textarea name="description" class="retro-input">{{ item.description }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="admin_img_file">Imagen (filename)</label>
+                    <input type="text" name="file_name" value="{{ item.file_name }}" class="retro-input">
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" name="active" {{ 'checked' if item.active }}> ¿Activo en el menú?
+                    </label>
+                </div>
+                <div class="modal-footer" style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="retro-btn full-width">Guardar Cambios</button>
+                    <label for="edit-modal-{{ item.id }}" class="retro-btn full-width" style="background:#eee; color:#333; text-align:center;">Cancelar</label>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <script src="{{ url_for('static', filename='js/translate.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>

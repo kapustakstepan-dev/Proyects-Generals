@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu - RetroBite</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <style>
+        .nav-content {
+            pointer-events: auto;
+            position: absolute;
+            right: -350px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 280px;
+
+            /* EFECTO CRISTAL NUBLADO Y DENSO */
+            /* Usamos un color base con mucha opacidad (0.9) */
+            background: linear-gradient(135deg,
+                    rgba(255, 255, 255, 0.9) 0%,
+                    rgba(240, 240, 240, 0.8) 100%) !important;
+
+            /* El secreto está en un blur muy alto (30px) */
+            backdrop-filter: blur(30px) saturate(120%) !important;
+            -webkit-backdrop-filter: blur(30px) saturate(120%) !important;
+
+            border-radius: 20px;
+            border: 3px solid var(--primary-color);
+            padding: 25px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+            box-shadow: 10px 10px 0px var(--shadow-color);
+        }
+
+        /* Ajuste automático para el MODO NOCHE */
+        [data-theme="dark"] .nav-content {
+            background: linear-gradient(135deg,
+                    rgba(40, 40, 40, 0.95) 0%,
+                    rgba(20, 20, 20, 0.9) 100%) !important;
+            border-color: var(--primary-color);
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="{{ url_for('home') }}" class="logo">RetroBite</a>
+            {% if current_user.is_authenticated %}
+            <span class="user-info">{{ current_user.nickname }}</span>
+            {% endif %}
+        </div>
+
+        <ul class="nav-links">
+            <li><a href="{{ url_for('menu') }}" data-i18n="nav_menu" class="active-link">Menu</a></li>
+            <li><a href="{{ url_for('my_orders') }}" data-i18n="nav_orders">My Orders</a></li>
+            <li><a href="{{ url_for('my_reservations') }}" data-i18n="nav_reserved">Reservation</a></li>
+            {% if current_user.role == 'admin' %}
+            <li><a href="{{ url_for('admin') }}" data-i18n="nav_admin">Admin</a></li>
+            {% endif %}
+            {% if current_user.is_authenticated %}
+            <li><a href="{{ url_for('logout') }}" data-i18n="nav_logout">Logout</a></li>
+            {% else %}
+            <li><a href="{{ url_for('login') }}" data-i18n="nav_login">Login</a></li>
+            {% endif %}
+        </ul>
+
+        <div class="lang-switcher">
+            <button class="lang-btn" data-lang="en">EN</button>
+            <button class="lang-btn" data-lang="es">ES</button>
+            <button class="lang-btn" data-lang="ua">UA</button>
+        </div>
+
+        <button id="theme-toggle" class="retro-btn" onclick="toggleTheme()" style="margin-left: 1rem; padding: 0.3rem 0.8rem;">
+            <span id="theme-icon">🌙</span> <span data-i18n="nav_theme">Change Theme</span>
+        </button>
+    </nav>
+
+    <main class="container animate-reveal">
+        <h1 data-i18n="menu_title" class="page-title">Food From The Past</h1>
+
+        <div id="sideNavigation" class="nav-container">
+            <button class="nav-toggle" onclick="toggleNav()">MENU</button>
+
+            <div class="nav-content">
+                <div class="nav-links-wrapper">
+                    <span class="nav-link" data-i18n="nav_salads" onclick="filterMenu('salads', this); toggleNav()">🥗 Salads</span>
+                    <span class="nav-link" data-i18n="nav_drinks" onclick="filterMenu('drinks', this); toggleNav()">🥤 Drinks</span>
+                    <span class="nav-link" data-i18n="nav_combos" data-i18n="nav_combos" onclick="filterMenu('combos', this); toggleNav()">🍔 Combos</span>
+                    <span class="nav-link" data-i18n="nav_desserts" onclick="filterMenu('desserts', this); toggleNav()">🍰 Postres</span>
+                    <span class="nav-link" data-i18n="nav_burgers" onclick="filterMenu('burgers', this); toggleNav()">🥘 Platos Principales</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-grid">
+            {% for item in menu_items %}
+            <div id="item_{{ item.id }}" class="retro-card menu-link"
+                data-url="{{ url_for('position', position_id=item.id) }}" data-category="{{ item.category }}">
+                <div class="menu-img">
+                    <img src="{{ url_for('static', filename='image/' ~ item.file_name) }}" alt="{{ item.name }}">
+                </div>
+                <div class="menu-item-info">
+                    <h3 data-i18n="item_{{ item.name | lower | replace(' ', '_') }}">{{ item.name }}</h3>
+                    <p class="menu-desc" data-i18n="desc_{{ item.name | lower | replace(' ', '_') }}">{{ item.description }}</p>
+                    <div class="menu-price">${{ "%.2f"|format(item.price) }}</div>
+
+                    <form method="POST" action="{{ url_for('position', position_id=item.id) }}"
+                        class="add-to-cart-form">
+                        <input type="number" name="quantity" value="1" min="1" max="10"
+                            class="retro-input quantity-input">
+                        <button type="submit" class="retro-btn" data-i18n="add_to_cart">Add to Cart</button>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <div class="no-items">
+                <p data-i18n="no_items_found">No menu items found.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script>
+        // --- Category Filtering ---
+        const filterMenu = (category, btn) => {
+            // Update active state for both static and radial nav
+            document.querySelectorAll('.filter-btn, .menu-item').forEach(b => {
+                b.classList.remove('active');
+            });
+
+            if (btn) {
+                btn.classList.add('active');
+            }
+
+            const items = document.querySelectorAll('.retro-card');
+            items.forEach(item => {
+                const itemCategory = item.getAttribute('data-category');
+                if (category === 'all' || itemCategory === category) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        };
+
+        document.querySelectorAll('.menu-link').forEach(card => {
+            card.addEventListener('click', () => {
+                const url = card.getAttribute('data-url');
+                if (url) window.location.href = url;
+            });
+        });
+
+        document.querySelectorAll('.add-to-cart-form').forEach(form => {
+            form.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        });
+    </script>
+
+    <script src="{{ url_for('static', filename='libs/anime.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/translate.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/invoice.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>
