@@ -1,9 +1,17 @@
 import os
+import logging
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from .supabase_client import supabase
 from .auth import register_user, login_user_supabase
+
+# --- STARTUP DEBUG ---
+print("\n" + "="*50)
+print(f"DEBUG STARTUP")
+print(f"FILE RUTA: {__file__}")
+print(f"ENV SUPABASE: {os.getenv('SUPABASE_URL')}")
+print("="*50 + "\n")
 
 app = Flask(__name__, 
             template_folder='../frontend/templates', 
@@ -67,8 +75,22 @@ def logout():
 
 @app.route('/menu')
 def menu():
-    res = supabase.table("menu").select("*").eq("active", True).execute()
-    return render_template('menu.html', menu_items=res.data)
+    try:
+        res = supabase.table("menu").select("*").eq("active", True).execute()
+        
+        # --- TEST DEFINITIVO (BACKEND) ---
+        print("\n" + "-"*30)
+        print("DEBUG /menu")
+        print(f"COUNT: {len(res.data)}")
+        if res.data:
+            print(f"FIRST ITEM: {res.data[0]['name']}")
+        print("-"*30 + "\n")
+        
+        # IMPORTANTE: El nombre de la variable debe ser 'menu_items' para el HTML
+        return render_template('menu.html', menu_items=res.data, debug_time=datetime.now().isoformat())
+    except Exception as e:
+        print(f"FATAL ERROR /menu: {e}")
+        return render_template('menu.html', menu_items=[], error=str(e))
 
 @app.route('/position/<int:position_id>', methods=['GET', 'POST'])
 def position(position_id):
@@ -79,7 +101,6 @@ def position(position_id):
     if request.method == 'POST':
         qty = int(request.form.get('quantity', 1))
         if 'basket' not in session: session['basket'] = {}
-        # Store item name for the template's simple display
         session['basket'][str(item['id'])] = session['basket'].get(str(item['id']), 0) + qty
         session.modified = True
         return redirect(url_for('menu'))
@@ -92,10 +113,8 @@ def create_order():
     basket = session.get('basket', {})
     if not basket: return redirect(url_for('menu'))
     
-    # Calculate Total & Prepare items for receipt
     items_for_json = []
     total = 0
-    # Map for the template's display (Name -> Qty)
     display_basket = {}
     
     for id_str, qty in basket.items():
@@ -107,11 +126,9 @@ def create_order():
             display_basket[it['name']] = qty
 
     if request.method == 'POST':
-        # Database transaction logic
         order_res = supabase.table("orders").insert({"user_id": current_user.id, "total_price": total}).execute()
         if order_res.data:
             order_id = order_res.data[0]['id']
-            # Re-map ids to order_items
             items_data = []
             for id_str, qty in basket.items():
                 res = supabase.table("menu").select("price").eq("id", int(id_str)).execute()
@@ -123,7 +140,7 @@ def create_order():
             
             return jsonify({
                 "success": True, 
-                "order_id": str(order_id)[:8], # Short version for display
+                "order_id": str(order_id)[:8],
                 "total": total, 
                 "items": items_for_json,
                 "date": datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -134,7 +151,6 @@ def create_order():
 @app.route('/my_orders')
 @login_required
 def my_orders():
-    # Simple list of orders
     res = supabase.table("orders").select("*, order_items(*, menu(*))").eq("user_id", current_user.id).order('order_time', desc=True).execute()
     return render_template('my_orders.html', orders=res.data)
 
@@ -154,7 +170,6 @@ def reservation():
 @app.route('/my_reservations')
 @login_required
 def my_reservations():
-    # Fetch both reservations and orders to show history
     res = supabase.table("reservations").select("*").eq("user_id", current_user.id).order('created_at', desc=True).execute()
     orders = supabase.table("orders").select("*").eq("user_id", current_user.id).order('order_time', desc=True).execute()
     return render_template('my_reservations.html', reservations=res.data, orders=orders.data)

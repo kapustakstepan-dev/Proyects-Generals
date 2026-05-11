@@ -4,6 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Menu - RetroBite</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
@@ -81,6 +84,9 @@
 
     <main class="container animate-reveal">
         <h1 data-i18n="menu_title" class="page-title">Food From The Past</h1>
+        <div style="text-align: center; color: var(--primary-color); margin-bottom: 1rem; font-family: monospace;">
+            [DEBUG] Items in DB: {{ menu_items|length }} | Last Update: {{ debug_time }}
+        </div>
 
         <div id="sideNavigation" class="nav-container">
             <button class="nav-toggle" onclick="toggleNav()">MENU</button>
