@@ -2,14 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "online_restaurant.py",
+      "src": "backend/app/main.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "online_restaurant.py"
+      "dest": "backend/app/main.py"
     }
   ]
 }
