@@ -5,7 +5,6 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 import re
 from flask_mail import Mail, Message
 from supabase import create_client, Client
-import bcrypt
 from dotenv import load_dotenv
 
 # Initialize Environment
@@ -46,38 +45,30 @@ class DBObject:
         return None
 
 class User(UserMixin, DBObject):
-    """User class for Flask-Login compatibility"""
+    """User class for Flask-Login compatibility using UUID"""
     def __init__(self, data):
         super().__init__(data)
-        self.id = str(data.get('id'))
+        self.id = data.get('id') # UUID string
         self.nickname = data.get('nickname')
         self.role = data.get('role', 'user')
-        self.password_hash = data.get('password')
+        self.email = data.get('email')
 
-    def check_password(self, password):
-        if not self.password_hash: return False
-        return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
-
-    @staticmethod
-    def hash_password(password):
-        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+@login_manager.user_loader
+def load_user(user_id):
+    try:
+        # Check in public.users table
+        res = supabase.table("users").select("*").eq("id", user_id).execute()
+        return User(res.data[0]) if res.data else None
+    except:
+        return None
 
 # --- UTILS ---
 def parse_db_date(date_str):
     if not date_str: return None
     try:
-        # Handle 'Z' suffix or other ISO variations
         return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
     except Exception:
         return datetime.now()
-
-@login_manager.user_loader
-def load_user(user_id):
-    try:
-        res = supabase.table("users").select("*").eq("id", user_id).execute()
-        return User(res.data[0]) if res.data else None
-    except:
-        return None
 
 # --- ROUTES ---
 @app.route('/')
@@ -98,54 +89,59 @@ def menu_view():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        nickname = request.form['username']
         email = request.form['email']
         password = request.form['password']
         
         try:
-            # Check duplicates
-            if supabase.table("users").select("id").eq("nickname", nickname).execute().data:
-                flash("Username already exists!")
-                return redirect(url_for('register'))
-            
-            if supabase.table("users").select("id").eq("email", email).execute().data:
-                flash("Email already registered!")
-                return redirect(url_for('register'))
-
-            supabase.table("users").insert({
-                "nickname": nickname,
+            # Use Supabase Auth to sign up
+            res = supabase.auth.sign_up({
                 "email": email,
-                "password": User.hash_password(password),
-                "role": 'user'
-            }).execute()
-
-            flash("Registered successfully!")
-            return redirect(url_for('login'))
-        except:
-            flash("Registration error")
+                "password": password
+            })
+            
+            if res.user:
+                flash("Registered successfully! Please check your email for confirmation.")
+                return redirect(url_for('login'))
+            else:
+                flash("Registration failed.")
+        except Exception as e:
+            flash(f"Error: {str(e)}")
             
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        nickname = request.form['username']
+        email = request.form['username'] # Assuming username field is email
         password = request.form['password']
         
-        res = supabase.table("users").select("*").eq("nickname", nickname).execute()
-        if res.data:
-            user = User(res.data[0])
-            if user.check_password(password):
-                login_user(user)
-                flash(f"Welcome, {user.nickname}!")
-                return redirect(url_for('menu'))
-        
-        flash("Invalid username or password")
+        try:
+            # Sign in with Supabase Auth
+            res = supabase.auth.sign_in_with_password({
+                "email": email,
+                "password": password
+            })
+            
+            if res.user:
+                # Fetch public profile
+                profile_res = supabase.table("users").select("*").eq("id", res.user.id).execute()
+                if profile_res.data:
+                    user = User(profile_res.data[0])
+                    login_user(user)
+                    flash(f"Welcome, {user.nickname}!")
+                    return redirect(url_for('menu'))
+            
+            flash("Invalid email or password")
+        except Exception as e:
+            print(f"Login error: {e}")
+            flash("An error occurred during login")
+            
     return render_template('login.html')
 
 @app.route('/logout')
 @login_required
 def logout():
+    supabase.auth.sign_out()
     logout_user()
     flash("Logged out")
     return redirect(url_for('login'))
@@ -182,24 +178,37 @@ def create_order():
             total_price += item.price * quantity
 
     if request.method == 'POST':
+        # 1. Create Order entry
         res_order = supabase.table("orders").insert({
-            "order_list": basket,
-            "total_price": total_price,
             "user_id": current_user.id,
-            "state": 'confirmed',
-            "order_time": datetime.now().isoformat()
+            "total_price": total_price,
+            "state": 'confirmed'
         }).execute()
         
-        order_id = res_order.data[0]['id'] if res_order.data else "SIM"
-        session.pop('basket', None)
-        
-        return jsonify({
-            "success": True,
-            "order_id": order_id,
-            "total": total_price,
-            "items": [{ "name": bi['item'].name, "qty": bi['quantity'], "price": bi['item'].price } for bi in basket_items],
-            "date": datetime.now().strftime("%Y-%m-%d %H:%M")
-        })
+        if res_order.data:
+            order_id = res_order.data[0]['id']
+            
+            # 2. Insert Order Items
+            order_items_data = []
+            for bi in basket_items:
+                order_items_data.append({
+                    "order_id": order_id,
+                    "menu_id": bi['item'].id,
+                    "quantity": bi['quantity'],
+                    "unit_price": bi['item'].price
+                })
+            
+            supabase.table("order_items").insert(order_items_data).execute()
+            
+            session.pop('basket', None)
+            
+            return jsonify({
+                "success": True,
+                "order_id": order_id,
+                "total": total_price,
+                "items": [{ "name": bi['item'].name, "qty": bi['quantity'], "price": bi['item'].price } for bi in basket_items],
+                "date": datetime.now().strftime("%Y-%m-%d %H:%M")
+            })
 
     return render_template('create_order.html', basket=basket, total_price=total_price)
 
@@ -259,7 +268,7 @@ def admin():
     reservations = [DBObject(r) for r in supabase.table("reservations").select("*").order("time_start", desc=True).execute().data]
     for r in reservations: r.time_start = parse_db_date(r.time_start)
     
-    users = [DBObject(u) for u in supabase.table("users").select("*").order("id", desc=False).execute().data]
+    users = [DBObject(u) for u in supabase.table("users").select("*").order("created_at", desc=False).execute().data]
     
     return render_template('admin.html', items=items, orders=orders, reservations=reservations, users=users, active_tab=tab)
 
@@ -281,20 +290,7 @@ def admin_menu_add():
     flash("Añadido")
     return redirect(url_for('admin', tab='menu'))
 
-@app.route('/admin/menu/edit/<int:id>', methods=['POST'])
-@login_required
-def admin_menu_edit(id):
-    if current_user.role != 'admin': return redirect(url_for('home'))
-    supabase.table("menu").update({
-        "name": request.form['name'],
-        "price": float(request.form['price']),
-        "description": request.form['description'],
-        "active": 'active' in request.form
-    }).eq("id", id).execute()
-    flash("Actualizado")
-    return redirect(url_for('admin', tab='menu'))
-
-@app.route('/admin/order/status/<int:id>', methods=['POST'])
+@app.route('/admin/order/status/<string:id>', methods=['POST'])
 @login_required
 def admin_order_status(id):
     if current_user.role != 'admin': return redirect(url_for('home'))
@@ -302,7 +298,7 @@ def admin_order_status(id):
     return redirect(url_for('admin', tab='orders'))
 
 # --- MAIL ---
-@app.route('/send_receipt/<int:order_id>', methods=['POST'])
+@app.route('/send_receipt/<string:order_id>', methods=['POST'])
 @login_required
 def send_receipt(order_id):
     data = request.get_json()
@@ -326,6 +322,6 @@ def send_receipt(order_id):
 @app.errorhandler(404)
 def page_not_found(e): return render_template('404.html'), 404
 
-# Entry point for Vercel
+# Export 'app' for Vercel
 if __name__ == '__main__':
     app.run(debug=True)
