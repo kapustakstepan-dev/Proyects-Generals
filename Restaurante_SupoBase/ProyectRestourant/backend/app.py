@@ -78,10 +78,8 @@ def register():
 @app.route('/logout')
 @login_required
 def logout():
-    uid = current_user.id
-    # supabase.auth.sign_out()
+    session.clear()
     logout_user()
-    logging.info(f"User {uid} logged out.")
     return redirect(url_for('login'))
 
 @app.route('/position/<int:position_id>', methods=['GET', 'POST'])

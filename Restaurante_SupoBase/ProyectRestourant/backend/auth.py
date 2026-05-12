@@ -13,9 +13,21 @@ def login_user_supabase(email, password):
     try:
         res = supabase.auth.sign_in_with_password({"email": email, "password": password})
         if res.user:
-            # Fetch profile to get role and nickname
-            profile = supabase.table("users").select("*").eq("id", res.user.id).execute()
-            profile_data = profile.data[0] if profile.data else {"id": res.user.id, "nickname": email.split('@')[0], "role": "user"}
+            # Fetch profile with fallback to avoid trigger lag issues
+            profile = supabase.table("users") \
+                .select("*") \
+                .eq("id", res.user.id) \
+                .execute()
+
+            profile_data = (
+                profile.data[0]
+                if profile.data
+                else {
+                    "id": res.user.id,
+                    "nickname": email.split("@")[0],
+                    "role": "user"
+                }
+            )
             return {"success": True, "user": res.user, "profile": profile_data}
         return {"success": False, "error": "Invalid email or password."}
     except Exception as e:
