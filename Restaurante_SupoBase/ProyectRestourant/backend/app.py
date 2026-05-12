@@ -40,6 +40,9 @@ def load_user(user_id):
 # --- CORE ROUTES ---
 
 @app.route('/')
+def index():
+    return redirect(url_for('menu'))
+
 @app.route('/home')
 def home():
     return render_template('home.html')
