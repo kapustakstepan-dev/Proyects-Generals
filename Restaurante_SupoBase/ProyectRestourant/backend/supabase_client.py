@@ -1,10 +1,17 @@
-from supabase import create_client
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-url = os.getenv("SUPABASE_URL")
-key = os.getenv("SUPABASE_KEY")
+supabase = None
 
-supabase = create_client(url, key) if url and key else None
+try:
+    from supabase import create_client
+
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_KEY")
+
+    if url and key:
+        supabase = create_client(url, key)
+except Exception as e:
+    print("Supabase init error:", str(e))

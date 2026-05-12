@@ -9,7 +9,13 @@ except Exception as e:
     logging.error(f"Error importando supabase_client: {e}")
     supabase = None
 
-from auth import register_user, login_user_supabase
+from auth import register_user, login_user_supabase, get_user_profile
+from backend.cache import menu_cache
+from backend.orders import create_order_atomic
+from backend.logs import log
+import time
+
+CACHE_TTL = 60 # 1 minute
 
 # --- LOGGING SETUP ---
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
@@ -55,16 +61,21 @@ def home():
 @app.route('/menu')
 def menu():
     try:
-        if supabase:
+        # Check cache
+        if menu_cache["data"] and (time.time() - menu_cache["ts"] < CACHE_TTL):
+            items = menu_cache["data"]
+        elif supabase:
             res = supabase.table("menu").select("*").eq("active", True).execute()
             items = res.data
-            logging.info(f"Fetched {len(items)} menu items from Supabase.")
+            menu_cache["data"] = items
+            menu_cache["ts"] = time.time()
+            log("MENU_FETCHED", f"{len(items)} items")
         else:
             items = []
-            logging.warning("Supabase client not available.")
+            
         return render_template('menu.html', menu_items=items)
     except Exception as e:
-        logging.error(f"Failed to fetch menu: {e}")
+        log("MENU_ERROR", str(e))
         return render_template('menu.html', menu_items=[], error="Database connection error.")
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -135,20 +146,13 @@ def create_order():
                 items_to_display.append({"name": it['name'], "qty": qty, "price": price})
                 items_to_insert.append({"menu_id": it['id'], "quantity": qty, "unit_price": price})
 
-        if request.method == 'POST':
-            order_res = supabase.table("orders").insert({
-                "user_id": current_user.id, 
-                "total_price": total_price
-            }).execute()
-            
-            if order_res.data:
-                oid = order_res.data[0]['id']
-                for i in items_to_insert: i['order_id'] = oid
-                supabase.table("order_items").insert(items_to_insert).execute()
-                
-                logging.info(f"Order {oid} created by user {current_user.id}. Total: {total_price}")
-                session.pop('basket', None)
-                return jsonify({"success": True, "order_id": str(oid)[:8]})
+            if request.method == 'POST':
+                oid = create_order_atomic(current_user.id, items_to_insert, total_price)
+                if oid:
+                    session.pop('basket', None)
+                    return jsonify({"success": True, "order_id": str(oid)[:8]})
+                else:
+                    return jsonify({"success": False, "error": "Order creation failed."}), 500
                 
     except Exception as e:
         logging.error(f"Checkout error: {e}")
@@ -191,16 +195,34 @@ def reservation():
 @app.route('/my_reservations')
 @login_required
 def my_reservations():
-    res = supabase.table("reservations").select("*").eq("user_id", current_user.id).order('created_at', desc=True).execute()
-    return render_template('my_reservations.html', reservations=res.data)
+    try:
+        if supabase:
+            res = supabase.table("reservations").select("*").eq("user_id", current_user.id).order('created_at', desc=True).execute()
+            reservas = res.data
+        else:
+            reservas = []
+        return render_template('my_reservations.html', reservations=reservas)
+    except Exception as e:
+        log("RESERVATIONS_ERROR", str(e))
+        return render_template('my_reservations.html', reservations=[])
 
 @app.route('/admin')
 @login_required
 def admin():
-    if current_user.role != 'admin': return "Forbidden", 403
-    menu_items = supabase.table("menu").select("*").execute().data
-    orders = supabase.table("orders").select("*, users(nickname)").execute().data
-    return render_template('admin.html', items=menu_items, orders=orders)
+    if current_user.role != 'admin': 
+        log("ADMIN_ACCESS_DENIED", current_user.id)
+        return "Forbidden", 403
+        
+    try:
+        if supabase:
+            menu_items = supabase.table("menu").select("*").execute().data
+            orders = supabase.table("orders").select("*, users(nickname)").execute().data
+        else:
+            menu_items, orders = [], []
+        return render_template('admin.html', items=menu_items, orders=orders)
+    except Exception as e:
+        log("ADMIN_PANEL_ERROR", str(e))
+        return "Error loading admin panel", 500
 
 if __name__ == '__main__':
     app.run(debug=True)
