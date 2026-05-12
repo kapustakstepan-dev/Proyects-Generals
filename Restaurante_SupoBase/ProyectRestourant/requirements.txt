@@ -5,5 +5,5 @@ supabase==2.3.0
 python-dotenv==1.0.0
 flask-limiter==3.5.0
 gunicorn==21.2.0
-postgrest==0.16.2
+postgrest==0.12.0
 httpx==0.26.0
