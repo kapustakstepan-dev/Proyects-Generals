@@ -1,10 +1,10 @@
 import sys
 import os
 
-# Ensure the project root is in the python path
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+# Robust path handling for Vercel
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from backend.app import app
 
-# Redundancy required by Vercel in some environments
+# Handler for Vercel
 app = app

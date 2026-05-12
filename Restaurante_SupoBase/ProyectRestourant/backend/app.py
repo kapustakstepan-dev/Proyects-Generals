@@ -3,7 +3,12 @@ import logging
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from supabase_client import supabase
+try:
+    from supabase_client import supabase
+except Exception as e:
+    logging.error(f"Error importando supabase_client: {e}")
+    supabase = None
+
 from auth import register_user, login_user_supabase
 
 # --- LOGGING SETUP ---
