@@ -1,10 +1,8 @@
 import sys
 import os
 
-# Robust path handling for Vercel
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+sys.path.append(BASE_DIR)
 
 from backend.app import app
-
-# Handler for Vercel
 app = app

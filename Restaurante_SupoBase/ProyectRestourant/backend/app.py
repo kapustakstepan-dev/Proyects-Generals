@@ -55,9 +55,14 @@ def home():
 @app.route('/menu')
 def menu():
     try:
-        res = supabase.table("menu").select("*").eq("active", True).execute()
-        logging.info(f"Fetched {len(res.data)} menu items from Supabase.")
-        return render_template('menu.html', menu_items=res.data)
+        if supabase:
+            res = supabase.table("menu").select("*").eq("active", True).execute()
+            items = res.data
+            logging.info(f"Fetched {len(items)} menu items from Supabase.")
+        else:
+            items = []
+            logging.warning("Supabase client not available.")
+        return render_template('menu.html', menu_items=items)
     except Exception as e:
         logging.error(f"Failed to fetch menu: {e}")
         return render_template('menu.html', menu_items=[], error="Database connection error.")
@@ -154,8 +159,16 @@ def create_order():
 @app.route('/my_orders')
 @login_required
 def my_orders():
-    res = supabase.table("orders").select("*, order_items(*, menu(*))").eq("user_id", current_user.id).order('order_time', desc=True).execute()
-    return render_template('my_orders.html', orders=res.data, items=session.get('basket', {}))
+    try:
+        if supabase:
+            res = supabase.table("orders").select("*, order_items(*, menu(*))").eq("user_id", current_user.id).order('order_time', desc=True).execute()
+            orders = res.data
+        else:
+            orders = []
+        return render_template('my_orders.html', orders=orders, items=session.get('basket', {}))
+    except Exception as e:
+        logging.error(f"My orders error: {e}")
+        return render_template('my_orders.html', orders=[], items=session.get('basket', {}))
 
 @app.route('/reservation', methods=['GET', 'POST'])
 @login_required
