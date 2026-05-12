@@ -3,8 +3,8 @@ import logging
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from .supabase_client import supabase
-from .auth import register_user, login_user_supabase
+from supabase_client import supabase
+from auth import register_user, login_user_supabase
 
 # --- LOGGING SETUP ---
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
@@ -79,7 +79,7 @@ def register():
 @login_required
 def logout():
     uid = current_user.id
-    supabase.auth.sign_out()
+    # supabase.auth.sign_out()
     logout_user()
     logging.info(f"User {uid} logged out.")
     return redirect(url_for('login'))

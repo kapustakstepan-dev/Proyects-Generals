@@ -57,8 +57,15 @@
             {% endif %}
         </ul>
 
-        <button id="theme-toggle" class="retro-btn" onclick="toggleTheme()" style="margin-left: 1rem; padding: 0.3rem 0.8rem;">
-            🌙
+        <div class="lang-switcher">
+            <button class="lang-btn" data-lang="en">EN</button>
+            <button class="lang-btn" data-lang="es">ES</button>
+            <button class="lang-btn" data-lang="ua">UA</button>
+        </div>
+
+        <button id="theme-toggle" class="retro-btn" onclick="toggleTheme()"
+            style="margin-left: 1rem; padding: 0.3rem 0.8rem;">
+            <span id="theme-icon">🌙</span> <span data-i18n="nav_theme">Change Theme</span>
         </button>
     </nav>
 
@@ -91,7 +98,8 @@
                     <p class="menu-desc">{{ item.description }}</p>
                     <div class="menu-price">${{ "%.2f"|format(item.price) }}</div>
                     <form method="POST" action="{{ url_for('position', position_id=item.id) }}">
-                        <input type="number" name="quantity" value="1" min="1" max="10" class="retro-input" style="width: 60px;">
+                        <input type="number" name="quantity" value="1" min="1" max="10" class="retro-input"
+                            style="width: 60px;">
                         <button type="submit" class="retro-btn">Add to Cart</button>
                     </form>
                 </div>

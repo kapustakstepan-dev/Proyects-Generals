@@ -1,4 +1,4 @@
-from .supabase_client import supabase
+from supabase_client import supabase
 
 def register_user(email, password):
     try:
@@ -15,8 +15,8 @@ def login_user_supabase(email, password):
         if res.user:
             # Fetch profile to get role and nickname
             profile = supabase.table("users").select("*").eq("id", res.user.id).execute()
-            if profile.data:
-                return {"success": True, "user": res.user, "profile": profile.data[0]}
+            profile_data = profile.data[0] if profile.data else {"id": res.user.id, "nickname": email.split('@')[0], "role": "user"}
+            return {"success": True, "user": res.user, "profile": profile_data}
         return {"success": False, "error": "Invalid email or password."}
     except Exception as e:
         return {"success": False, "error": str(e)}

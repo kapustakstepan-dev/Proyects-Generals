@@ -6,35 +6,127 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Checkout - RetroBite</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Receipt Aesthetic */
+        .receipt-modal {
+            background: #fff;
+            color: #333;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-top: 10px solid #333;
+        }
+
+        .receipt-header {
+            text-align: center;
+            border-bottom: 2px dashed #999;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+        }
+
+        .receipt-logo {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .receipt-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .receipt-total {
+            border-top: 2px dashed #999;
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 1.25rem;
+        }
+
+        .receipt-footer {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .receipt-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .confirm-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .confirm-overlay.active {
+            display: flex;
+        }
+    </style>
 </head>
 
 <body>
     <nav class="navbar">
         <div class="nav-brand">
             <a href="{{ url_for('home') }}" class="logo">RetroBite</a>
+            {% if current_user.is_authenticated %}
+            <span class="user-info">{{ current_user.nickname }}</span>
+            {% endif %}
         </div>
         <ul class="nav-links">
-            <li><a href="{{ url_for('menu') }}">Back to Menu</a></li>
+            <li><a href="{{ url_for('menu') }}" data-i18n="nav_menu">Menu</a></li>
+            <li><a href="{{ url_for('my_orders') }}" data-i18n="nav_orders">My Orders</a></li>
+            <li><a href="{{ url_for('my_reservations') }}" data-i18n="nav_reserved">Reservation</a></li>
+            {% if current_user.role == 'admin' %}
+            <li><a href="{{ url_for('admin') }}" data-i18n="nav_admin">Admin</a></li>
+            {% endif %}
+            {% if current_user.is_authenticated %}
+            <li><a href="{{ url_for('logout') }}" data-i18n="nav_logout">Logout</a></li>
+            {% else %}
+            <li><a href="{{ url_for('login') }}" data-i18n="nav_login">Login</a></li>
+            {% endif %}
         </ul>
+        <div class="lang-switcher">
+            <button class="lang-btn" data-lang="en">EN</button>
+            <button class="lang-btn" data-lang="es">ES</button>
+            <button class="lang-btn" data-lang="ua">UA</button>
+        </div>
     </nav>
 
     <main class="container">
-        <div class="retro-form" style="max-width: 600px;">
-            <h1 class="form-title">Order Summary</h1>
+        <div class="retro-form animate-reveal" style="max-width: 600px;">
+            <h1 class="form-title" data-i18n="checkout_title">Checkout</h1>
 
-            {% if basket_items %}
+            {% if basket %}
             <div class="checkout-summary">
-                <ul class="order-list-summary" style="list-style: none; padding: 0;">
-                    {% for item in basket_items %}
-                    <li style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc; padding: 0.5rem 0;">
-                        <span><strong>{{ item.name }}</strong> (x{{ item.qty }})</span>
-                        <span>${{ "%.2f"|format(item.price * item.qty) }}</span>
+                <ul class="order-list-summary">
+                    {% for position, count in basket.items() %}
+                    <li class="order-summary-item"
+                        style="display: flex; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px dashed #ccc;">
+                        <span class="item-name"><strong>{{ position }}</strong></span>
+                        <span class="item-qty">x{{ count }}</span>
                     </li>
                     {% endfor %}
                 </ul>
 
-                <div style="text-align: right; margin-top: 1.5rem; font-size: 1.5rem;">
-                    <strong>Total: ${{ total_price }}</strong>
+                <div class="checkout-total" style="text-align: right; margin: 1rem 0; font-size: 1.5rem;">
+                    <span data-i18n="total">Total</span>: ${{ total_price }}
                 </div>
 
                 <div style="margin-top: 2rem; display: flex; gap: 1rem;">
