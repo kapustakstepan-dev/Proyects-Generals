@@ -113,14 +113,14 @@
         <div class="retro-form animate-reveal" style="max-width: 600px;">
             <h1 class="form-title" data-i18n="checkout_title">Checkout</h1>
 
-            {% if basket %}
+            {% if basket_items %}
             <div class="checkout-summary">
                 <ul class="order-list-summary">
-                    {% for position, count in basket.items() %}
+                    {% for item in basket_items %}
                     <li class="order-summary-item"
                         style="display: flex; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px dashed #ccc;">
-                        <span class="item-name"><strong>{{ position }}</strong></span>
-                        <span class="item-qty">x{{ count }}</span>
+                        <span class="item-name"><strong>{{ item.name }}</strong></span>
+                        <span class="item-qty">x{{ item.qty }}</span>
                     </li>
                     {% endfor %}
                 </ul>

@@ -149,7 +149,7 @@ def create_order():
 @login_required
 def my_orders():
     res = supabase.table("orders").select("*, order_items(*, menu(*))").eq("user_id", current_user.id).order('order_time', desc=True).execute()
-    return render_template('my_orders.html', orders=res.data)
+    return render_template('my_orders.html', orders=res.data, items=session.get('basket', {}))
 
 @app.route('/reservation', methods=['GET', 'POST'])
 @login_required
