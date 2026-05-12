@@ -6,5 +6,5 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from backend.app import app
 
-# Explicit export for Vercel
+# Redundancy required by Vercel in some environments
 app = app
